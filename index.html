@@ -511,7 +511,7 @@
             const notation = getMoveStringFromSlider(axis, val - 1);
             document.getElementById('mode-toggle-btn').innerHTML = `${notation}`;
         } else {
-            document.getElementById('mode-toggle-btn').innerHTML = `⌨ 公式`;
+            document.getElementById('mode-toggle-btn').innerHTML = t('formulaBtn');
         }
     }
 
@@ -531,7 +531,7 @@
     function renderHistory() {
         const histEl = document.getElementById('move-history-text');
         const toggleBtn = document.getElementById('hist-toggle-btn');
-        histEl.innerText = moveHistory.length > 0 ? moveHistory.join(' ') : '暂无记录';
+        histEl.innerText = moveHistory.length > 0 ? moveHistory.join(' ') : t('noHistory');
         document.getElementById('undo-btn').disabled = moveHistory.length === 0;
         document.getElementById('redo-btn').disabled = redoHistory.length === 0;
 
@@ -573,7 +573,7 @@
 
     function scrambleCube() {
         if (isEngineRunning || dragCtrl.active || isEditMode) return;
-        if (moveHistory.length > 0 && !confirm("打乱将清空当前历史记录，是否继续？")) return;
+        if (moveHistory.length > 0 && !confirm(t('warnScramble'))) return;
         clearHistory();
         
         const faces = ['U', 'D', 'L', 'R', 'F', 'B'];
@@ -604,7 +604,7 @@
 
     function resetCube() {
         if (isEngineRunning || dragCtrl.active || isEditMode) return;
-        if (moveHistory.length > 0 && !confirm("将清空历史并恢复初始状态，是否继续？")) return;
+        if (moveHistory.length > 0 && !confirm(t('warnReset'))) return;
         changeOrder(N);
     }
 
@@ -630,9 +630,9 @@
         
         const tokens = input.split(/\s+/);
         let parsedConfigs = [];
-        for (let t of tokens) {
-            const configs = parseWCA(t);
-            if (configs.length === 0) { alert(`未知公式符号: ${t}`); return; }
+        for (let t_token of tokens) {
+            const configs = parseWCA(t_token);
+            if (configs.length === 0) { alert(`${t('errUnknown')}${t_token}`); return; }
             parsedConfigs.push(...configs);
         }
         if (parsedConfigs.length > 0) {
@@ -652,13 +652,13 @@
         if (isEngineRunning || dragCtrl.active || isEditMode) return;
         let newN = N;
         if (val === 'custom') {
-            const input = prompt("请输入挑战阶数:", "10");
+            const input = prompt(t('customPrompt'), "10");
             const parsed = parseInt(input);
             if (parsed && parsed >= 1) {
                 newN = parsed;
                 const selector = document.getElementById('order-selector');
                 const opt = document.createElement('option');
-                opt.value = newN; opt.text = `${newN} 阶 (自定)`; opt.selected = true;
+                opt.value = newN; opt.text = `${newN}${t('customLabel')}`; opt.selected = true;
                 selector.insertBefore(opt, selector.lastElementChild);
             } else { document.getElementById('order-selector').value = N; return; }
         } else newN = parseInt(val);
@@ -865,20 +865,20 @@
     window.addEventListener('pointerup', endDrag); window.addEventListener('pointercancel', endDrag);
 
     function toggleEditMode() {
-        if (isEngineRunning || dragCtrl.active) return;
+        if (isEngineRunning || dragCtrl.active || isExecutingFormula) return;
         const editBtn = document.getElementById('edit-btn');
         const palette = document.getElementById('palette');
         
         if (!isEditMode) {
-            if (moveHistory.length > 0 && !confirm("警告：进入涂色编辑模式必须清空当前的因果历史记录。\n\n是否继续并清空时间轴？")) return;
+            if (moveHistory.length > 0 && !confirm(t('warnHistory'))) return;
             clearHistory(); 
             isEditMode = true; palette.style.display = 'block';
-            editBtn.innerText = '校验并退出涂色'; editBtn.style.backgroundColor = '#27ae60'; editBtn.style.borderColor = '#2ecc71';
+            editBtn.innerText = t('validateExit'); editBtn.style.backgroundColor = '#27ae60'; editBtn.style.borderColor = '#2ecc71';
             setControlsDisabled(true); editBtn.disabled = false;
         } else {
             if (validateColors()) {
                 isEditMode = false; palette.style.display = 'none';
-                editBtn.innerText = '涂色模式'; editBtn.style.backgroundColor = '#e74c3c'; editBtn.style.borderColor = '#c0392b';
+                editBtn.innerText = t('paintMode'); editBtn.style.backgroundColor = '#e74c3c'; editBtn.style.borderColor = '#c0392b';
                 setControlsDisabled(false);
             }
         }
@@ -895,16 +895,16 @@
         for (let s of stickersData) counts[s.color] = (counts[s.color] || 0) + 1;
         const target = Math.max(1, N * N);
         for (let [key, val] of Object.entries(C_STR)) {
-            if (counts[val] !== target) { alert(`校验未通过：\n每种颜色应当精确含有 ${target} 块！\n当前状态下某颜色数量多余或缺失，请仔细检查并填补。`); return false; }
+            if (counts[val] !== target) { alert(t('errCount').replace('{n}', target)); return false; }
         }
         
         if (N > 1) { 
             for (let cubie of cubies) {
                 const cubieColors = stickersData.filter(s => s.cubie === cubie).map(s => s.color);
-                if (new Set(cubieColors).size !== cubieColors.length) { alert('校验未通过：【面色互斥定律】冲突！\n不允许同一个实体块出现两面颜色相同，这在物理世界无法拼装。'); return false; }
-                if (cubieColors.includes(C_STR.U) && cubieColors.includes(C_STR.D)) { alert('校验未通过：【对立色互斥】冲突！\n顶/底面对立色（黄/白）绝不可能出现在同一个边角块上。'); return false; }
-                if (cubieColors.includes(C_STR.F) && cubieColors.includes(C_STR.B)) { alert('校验未通过：【对立色互斥】冲突！\n前/后面对立色（蓝/绿）绝不可能出现在同一个边角块上。'); return false; }
-                if (cubieColors.includes(C_STR.L) && cubieColors.includes(C_STR.R)) { alert('校验未通过：【对立色互斥】冲突！\n左/右面对立色（橙/红）绝不可能出现在同一个边角块上。'); return false; }
+                if (new Set(cubieColors).size !== cubieColors.length) { alert(t('errFace')); return false; }
+                if (cubieColors.includes(C_STR.U) && cubieColors.includes(C_STR.D)) { alert(t('errOppUD')); return false; }
+                if (cubieColors.includes(C_STR.F) && cubieColors.includes(C_STR.B)) { alert(t('errOppFB')); return false; }
+                if (cubieColors.includes(C_STR.L) && cubieColors.includes(C_STR.R)) { alert(t('errOppLR')); return false; }
             }
         }
         return true;
@@ -937,6 +937,8 @@
         requestAnimationFrame(renderLoop); draw2DTopology(); renderer.render(scene, camera);
     }
 
+    // 系统启动初始化
+    changeLanguage('en'); // 初始化为英文
     changeOrder(N);
     renderLoop();
 </script>
