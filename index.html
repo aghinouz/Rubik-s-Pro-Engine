@@ -865,7 +865,7 @@
     window.addEventListener('pointerup', endDrag); window.addEventListener('pointercancel', endDrag);
 
     function toggleEditMode() {
-        if (isEngineRunning || dragCtrl.active || isExecutingFormula) return;
+        if (isEngineRunning || dragCtrl.active) return;
         const editBtn = document.getElementById('edit-btn');
         const palette = document.getElementById('palette');
         
