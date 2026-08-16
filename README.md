@@ -8,8 +8,8 @@ A highly optimized, dependency-free, and high-performance N-order Rubik's Cube t
 
 ## ✨ Core Features
 
-*   **Unlimited N-Order Support**: Seamlessly switch and render anything from a 1x1x1 to a 50x50x50 cube and beyond.
-*   **Extreme Performance (GPU Instancing)**: Powered by Three.js `InstancedMesh`. No matter how high the order is, the Draw Call is strictly locked to `2`. Eliminates CPU/GPU bottlenecks, ensuring 60FPS even on a 50-order cube.
+*   **Unlimited N-Order Support**: Seamlessly switch and render anything cube.
+*   **Extreme Performance (GPU Instancing)**: Powered by Three.js `InstancedMesh`. No matter how high the order is, the Draw Call is strictly locked to `2`. Eliminates CPU/GPU bottlenecks.
 *   **Continuous Topological Mapping**: The 2D topological diagram on the left strictly maps the 3D spatial deflection in real-time based on 3D polar coordinate focal calculations.
 *   **WCA Algebraic Engine**: Natively parses standard Singmaster notation (e.g., `U`, `M`, `3Rw`, `2L'`, `x`). Supports asynchronous queue execution, allowing continuous "blind typing" during animations without losing input focus.
 *   **Reversible Edit Mode**: Built-in painting palette with strict topological physics validation (total color conservation, face-color mutual exclusion, opposite-color mutual exclusion).
