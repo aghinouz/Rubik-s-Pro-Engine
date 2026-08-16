@@ -27,3 +27,7 @@
 ## 📄 开源协议
 
 本项目基于 [MIT License](LICENSE) 协议开源。
+
+## ☕ 赞助与支持
+如果您觉得这个脚本节省了您的时间，或者单纯想支持一下开发工作，欢迎通过以下方式请作者喝杯咖啡：
+*   [**爱发电 (Afdian)**](https://afdian.com/a/aghinouz) | [**Ko-fi**](https://ko-fi.com/aghinouz) | [**Patreon**](https://patreon.com/aghinouz)
