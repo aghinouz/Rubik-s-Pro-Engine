@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Rubik's Cube - Pro Algebraic Engine</title>
@@ -67,6 +67,13 @@
         #palette { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; user-select: none; }
         .color-swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s; }
         .color-swatch.active { border: 3px solid #2c3e50; transform: scale(1.15); }
+
+        /* 语言切换与作者页脚样式 */
+        .footer-info { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 12px; color: #95a5a6; }
+        .footer-info a { color: #1abc9c; text-decoration: none; font-weight: bold; transition: color 0.2s; }
+        .footer-info a:hover { color: #16a085; text-decoration: underline; }
+        .lang-switch { background: transparent; border: none; color: #7f8c8d; cursor: pointer; font-size: 12px; font-weight: bold; transition: color 0.2s; padding: 0 4px; }
+        .lang-switch:hover, .lang-switch.active { color: #1abc9c; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -76,7 +83,7 @@
     <div id="canvas-2d-container">
         <canvas id="view-2d"></canvas>
         <div id="palette" style="display: none;">
-            <p style="margin: 0 0 12px 0; font-size:14px; font-weight:bold; color:#2c3e50;">滑动涂色 (GPU 实例更新)：</p>
+            <p style="margin: 0 0 12px 0; font-size:14px; font-weight:bold; color:#2c3e50;" data-i18n="paintHint">Swipe to paint (GPU Instanced):</p>
             <div style="display:flex; gap:10px;">
                 <div class="color-swatch active" style="background:#ffff00;" onclick="setBrush('#ffff00', this)"></div>
                 <div class="color-swatch" style="background:#ffffff;" onclick="setBrush('#ffffff', this)"></div>
@@ -95,16 +102,16 @@
         <p class="controls-title">Rubik's Pro Engine</p>
         <div style="display: flex; gap: 15px; align-items: center;">
             <select id="order-selector" onchange="handleOrderChange(this.value)">
-                <option value="2">2 阶</option>
-                <option value="3" selected>3 阶</option>
-                <option value="custom">自定...</option>
+                <option value="2" data-i18n="opt1">2 Layers</option>
+                <option value="3" selected data-i18n="opt2">3 Layers</option>
+                <option value="custom" data-i18n="optCustom">Custom...</option>
             </select>
 
             <div class="split-btn action-group">
-                <button onclick="scrambleCube()">打乱</button>
-                <button onclick="resetCube()">重置</button>
+                <button onclick="scrambleCube()" data-i18n="scramble">Scramble</button>
+                <button onclick="resetCube()" data-i18n="reset">Reset</button>
             </div>
-            <button id="edit-btn" class="action-btn" style="background-color: #e74c3c; border: 1px solid #c0392b;" onclick="toggleEditMode()">涂色模式</button>
+            <button id="edit-btn" class="action-btn" style="background-color: #e74c3c; border: 1px solid #c0392b;" onclick="toggleEditMode()" data-i18n="paintMode">Paint Mode</button>
             <div class="split-btn y-group">
                 <button onclick="executeFormulaStr('y')">y</button>
                 <button onclick="executeFormulaStr('y\'')">y'</button>
@@ -114,38 +121,45 @@
     
     <div class="history-panel">
         <div class="split-btn history-group">
-            <button id="undo-btn" onclick="undoMove()" disabled title="撤销">↶</button>
-            <button id="redo-btn" onclick="redoMove()" disabled title="重做">↷</button>
+            <button id="undo-btn" onclick="undoMove()" disabled title="Undo">↶</button>
+            <button id="redo-btn" onclick="redoMove()" disabled title="Redo">↷</button>
         </div>
 
-        <div id="move-history-text" title="支持全选复制">暂无记录</div>
+        <div id="move-history-text" data-i18n="noHistory">No history yet</div>
         
         <button id="hist-toggle-btn" class="action-btn" style="background: transparent; color: #1abc9c; border: 1px solid #1abc9c; padding: 4px 8px; display: none;" onclick="toggleHistory()">▼</button>
-        <button id="clear-btn" class="action-btn" style="background: #7f8c8d; padding: 6px 10px;" onclick="clearHistory()">清空</button>
+        <button id="clear-btn" class="action-btn" style="background: #7f8c8d; padding: 6px 10px;" onclick="clearHistory()" data-i18n="clear">Clear</button>
     </div>
 
     <div class="operation-panel">
-        <!-- 核心动态模式切换按钮 -->
         <button id="mode-toggle-btn" class="action-btn" style="background:#2980b9; min-width: 60px; font-size:15px; color:#f1c40f;" onclick="toggleOpMode()">U</button>
         
-        <!-- 模式1: 滑块控制 -->
         <div id="mode-1-container" style="display:flex; flex:1; align-items:center; gap:15px; justify-content:space-between;">
             <select id="op-axis" onchange="updateSliderLabel()" style="width: auto;">
-                <option value="Y">Y 轴 (上下)</option>
-                <option value="X">X 轴 (右左)</option>
-                <option value="Z">Z 轴 (前后)</option>
+                <option value="Y" data-i18n="axisY">Y Axis (Up/Down)</option>
+                <option value="X" data-i18n="axisX">X Axis (Right/Left)</option>
+                <option value="Z" data-i18n="axisZ">Z Axis (Front/Back)</option>
             </select>
             <input type="range" id="op-layer" min="1" max="3" value="1" oninput="updateSliderLabel()">
             <div class="split-btn">
-                <button onclick="executeSliderRotation(false)" title="顺转">↻</button>
-                <button onclick="executeSliderRotation(true)" title="逆转">↺</button>
+                <button onclick="executeSliderRotation(false)">↻</button>
+                <button onclick="executeSliderRotation(true)">↺</button>
             </div>
         </div>
 
-        <!-- 模式2: WCA 公式 -->
         <div id="mode-2-container" style="display:none; flex:1; align-items:center; gap:15px;">
-            <input type="text" id="formula-input" placeholder="输入公式按回车 (支持 M, r, MR, 2U 等)，如: R U R' U' y" style="flex:1; padding:8px 12px; border-radius:4px; border:none; outline:none; background:#34495e; color:#1abc9c; font-family:monospace; font-weight:bold; font-size:14px;">
-            <button class="action-btn" style="background:#27ae60; white-space:nowrap;" onclick="executeFormulaInput()">▶ 执行</button>
+            <input type="text" id="formula-input" placeholder="Enter formula (e.g., R U R' U' y 2U)" style="flex:1; padding:8px 12px; border-radius:4px; border:none; outline:none; background:#34495e; color:#1abc9c; font-family:monospace; font-weight:bold; font-size:14px;">
+            <button class="action-btn" style="background:#27ae60; white-space:nowrap;" onclick="executeFormulaInput()" data-i18n="execBtn">▶ Execute</button>
+        </div>
+    </div>
+    
+    <!-- 国际化页脚、作者与发布链接 -->
+    <div class="footer-info">
+        <span>Created by aghinouz</span>
+        <div>
+            <button class="lang-switch active" onclick="changeLanguage('en')" id="lang-en">EN</button> / 
+            <button class="lang-switch" onclick="changeLanguage('zh')" id="lang-zh">中文</button>
+            <a href="https://github.com/aghinouz/Rubik-s-Pro-Engine" target="_blank" style="margin-left: 10px;">★ GitHub Release</a>
         </div>
     </div>
 </div>
