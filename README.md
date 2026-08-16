@@ -28,3 +28,7 @@ Simply clone this repository and double-click `index.html` in any modern browser
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## ☕ Support the Author
+If you find this script helpful and it saves you time managing your torrents, consider supporting the development!
+*   [**爱发电 (Afdian)**](https://afdian.com/a/aghinouz) | [**Ko-fi**](https://ko-fi.com/aghinouz) | [**Patreon**](https://patreon.com/aghinouz)
