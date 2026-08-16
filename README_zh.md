@@ -18,7 +18,7 @@
 ## 🚀 快速体验
 
 本项目已部署至 GitHub Pages，点击即玩：
-**[👉 在线体验地址] (稍后填入你的 GitHub Pages 链接)**
+**[👉 在线体验地址](https://aghinouz.github.io/Rubik-s-Pro-Engine/)**
 
 ## 🛠️ 本地运行
 
