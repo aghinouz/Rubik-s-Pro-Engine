@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Rubik's Cube - Pro Algebraic Engine</title>
+    <style>
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f5f5f5; font-family: sans-serif; overflow: hidden; }
+        #container { display: flex; flex: 1; width: 100%; min-height: 0; }
+        
+        #canvas-2d-container { flex: 1; position: relative; border-right: 2px solid #ccc; background: #f0f0ed; min-width: 0; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+        
+        #canvas-3d-container { flex: 1; position: relative; background: #f0f0ed; cursor: grab; touch-action: none; min-width: 0; overflow: hidden; }
+        #canvas-3d-container canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; display: block; }
+        #canvas-3d-container:active { cursor: grabbing; }
+        
+        #controls { 
+            background: #2c3e50; padding: 15px 25px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; 
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2); z-index: 10;
+        }
+        
+        .controls-header { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 800px; }
+        .controls-title { color: #1abc9c; font-size: 15px; margin: 0; font-weight: bold;}
+        
+        select { padding: 6px 10px; font-size: 14px; font-weight: bold; border-radius: 4px; background: #34495e; color: #f1c40f; border: 1px solid #1abc9c; cursor: pointer; outline: none; }
+        select:hover { background: #1abc9c; color: white; }
+
+        .action-btn { padding: 6px 14px; font-size: 14px; font-weight: bold; color: #fff; border-radius: 4px; cursor: pointer; transition: all 0.2s; outline: none; border: none; display: flex; align-items: center; justify-content: center;}
+        .action-btn:hover:not(:disabled) { background-color: #1abc9c; }
+        .action-btn:disabled { background-color: #7f8c8d; opacity: 0.6; cursor: not-allowed; }
+
+        .operation-panel { display: flex; flex-direction: row; align-items: center; gap: 15px; width: 100%; max-width: 800px; background: rgba(0,0,0,0.2); padding: 12px 20px; border-radius: 6px; box-sizing: border-box;}
+        
+        input[type=range] { flex: 1; cursor: pointer; accent-color: #1abc9c; margin: 0; min-width: 100px; }
+
+        .split-btn { display: flex; border-radius: 4px; overflow: hidden; border: 1px solid #1abc9c; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .split-btn button { min-width: 38px; border-radius: 0; box-shadow: none; border: none; border-right: 1px solid #1abc9c; margin: 0; padding: 6px 14px; font-size: 16px; font-weight: bold; color: #fff; background-color: #34495e; cursor: pointer; transition: background 0.2s;}
+        .split-btn button:last-child { border-right: none; }
+        .split-btn button:hover:not(:disabled) { background-color: #1abc9c; }
+        .split-btn button:disabled { background-color: #7f8c8d; color: #ccc; cursor: not-allowed; }
+
+        .split-btn.action-group { border-color: #2980b9; }
+        .split-btn.action-group button { border-right-color: #2980b9; background-color: #3498db; font-size: 14px; padding: 6px 12px; }
+        .split-btn.action-group button:hover:not(:disabled) { background-color: #2980b9; }
+
+        .split-btn.y-group { border-color: #f39c12; }
+        .split-btn.y-group button { border-right-color: #f39c12; color: #f39c12; font-size: 14px; padding: 6px 12px; }
+        .split-btn.y-group button:hover:not(:disabled) { background-color: #f39c12; color: #fff; }
+
+        .split-btn.history-group { border-color: #c0392b; flex-shrink: 0; }
+        .split-btn.history-group button { border-right-color: #c0392b; background-color: #e74c3c; color: #fff; font-size: 16px; padding: 6px 12px;}
+        .split-btn.history-group button:hover:not(:disabled) { background-color: #c0392b; }
+
+        .history-panel { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: 800px; background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 6px; box-sizing: border-box; }
+        
+        #move-history-text { 
+            flex: 1; background: #34495e; color: #1abc9c; padding: 6px 10px; border-radius: 4px; 
+            font-family: monospace; font-size: 15px; font-weight: bold; 
+            white-space: nowrap; overflow-x: auto; overflow-y: hidden; 
+            min-height: 20px; max-height: 20px; line-height: 20px; letter-spacing: 1px;
+            user-select: text; cursor: text; transition: max-height 0.3s;
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        #move-history-text::-webkit-scrollbar { display: none; }
+        #move-history-text.expanded { white-space: pre-wrap; word-wrap: break-word; overflow-x: hidden; overflow-y: auto; max-height: 120px; }
+
+        #palette { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; user-select: none; }
+        .color-swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s; }
+        .color-swatch.active { border: 3px solid #2c3e50; transform: scale(1.15); }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="container">
+    <div id="canvas-2d-container">
+        <canvas id="view-2d"></canvas>
+        <div id="palette" style="display: none;">
+            <p style="margin: 0 0 12px 0; font-size:14px; font-weight:bold; color:#2c3e50;">滑动涂色 (GPU 实例更新)：</p>
+            <div style="display:flex; gap:10px;">
+                <div class="color-swatch active" style="background:#ffff00;" onclick="setBrush('#ffff00', this)"></div>
+                <div class="color-swatch" style="background:#ffffff;" onclick="setBrush('#ffffff', this)"></div>
+                <div class="color-swatch" style="background:#0000ff;" onclick="setBrush('#0000ff', this)"></div>
+                <div class="color-swatch" style="background:#00ff00;" onclick="setBrush('#00ff00', this)"></div>
+                <div class="color-swatch" style="background:#ff8800;" onclick="setBrush('#ff8800', this)"></div>
+                <div class="color-swatch" style="background:#ff0000;" onclick="setBrush('#ff0000', this)"></div>
+            </div>
+        </div>
+    </div>
+    <div id="canvas-3d-container"></div>
+</div>
+
+<div id="controls">
+    <div class="controls-header">
+        <p class="controls-title">Rubik's Pro Engine</p>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <select id="order-selector" onchange="handleOrderChange(this.value)">
+                <option value="2">2 阶</option>
+                <option value="3" selected>3 阶</option>
+                <option value="custom">自定...</option>
+            </select>
+
+            <div class="split-btn action-group">
+                <button onclick="scrambleCube()">打乱</button>
+                <button onclick="resetCube()">重置</button>
+            </div>
+            <button id="edit-btn" class="action-btn" style="background-color: #e74c3c; border: 1px solid #c0392b;" onclick="toggleEditMode()">涂色模式</button>
+            <div class="split-btn y-group">
+                <button onclick="executeFormulaStr('y')">y</button>
+                <button onclick="executeFormulaStr('y\'')">y'</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="history-panel">
+        <div class="split-btn history-group">
+            <button id="undo-btn" onclick="undoMove()" disabled title="撤销">↶</button>
+            <button id="redo-btn" onclick="redoMove()" disabled title="重做">↷</button>
+        </div>
+
+        <div id="move-history-text" title="支持全选复制">暂无记录</div>
+        
+        <button id="hist-toggle-btn" class="action-btn" style="background: transparent; color: #1abc9c; border: 1px solid #1abc9c; padding: 4px 8px; display: none;" onclick="toggleHistory()">▼</button>
+        <button id="clear-btn" class="action-btn" style="background: #7f8c8d; padding: 6px 10px;" onclick="clearHistory()">清空</button>
+    </div>
+
+    <div class="operation-panel">
+        <!-- 核心动态模式切换按钮 -->
+        <button id="mode-toggle-btn" class="action-btn" style="background:#2980b9; min-width: 60px; font-size:15px; color:#f1c40f;" onclick="toggleOpMode()">U</button>
+        
+        <!-- 模式1: 滑块控制 -->
+        <div id="mode-1-container" style="display:flex; flex:1; align-items:center; gap:15px; justify-content:space-between;">
+            <select id="op-axis" onchange="updateSliderLabel()" style="width: auto;">
+                <option value="Y">Y 轴 (上下)</option>
+                <option value="X">X 轴 (右左)</option>
+                <option value="Z">Z 轴 (前后)</option>
+            </select>
+            <input type="range" id="op-layer" min="1" max="3" value="1" oninput="updateSliderLabel()">
+            <div class="split-btn">
+                <button onclick="executeSliderRotation(false)" title="顺转">↻</button>
+                <button onclick="executeSliderRotation(true)" title="逆转">↺</button>
+            </div>
+        </div>
+
+        <!-- 模式2: WCA 公式 -->
+        <div id="mode-2-container" style="display:none; flex:1; align-items:center; gap:15px;">
+            <input type="text" id="formula-input" placeholder="输入公式按回车 (支持 M, r, MR, 2U 等)，如: R U R' U' y" style="flex:1; padding:8px 12px; border-radius:4px; border:none; outline:none; background:#34495e; color:#1abc9c; font-family:monospace; font-weight:bold; font-size:14px;">
+            <button class="action-btn" style="background:#27ae60; white-space:nowrap;" onclick="executeFormulaInput()">▶ 执行</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let N = 3;
+    const COLORS = { U: 0xffff00, D: 0xffffff, F: 0x0000ff, B: 0x00ff00, L: 0xff8800, R: 0xff0000, CORE: 0x222222 };
+    const C_STR = { U: '#ffff00', D: '#ffffff', F: '#0000ff', B: '#00ff00', L: '#ff8800', R: '#ff0000' };
+
+    let cubies = [], stickersData = [];
+    let isEditMode = false, currentBrushColor = C_STR.U;
+    
+    // --- 纯血异步队列引擎 ---
+    let moveHistory = [], redoHistory = [], formulaQueue = [], isEngineRunning = false;
+    let currentOpMode = 1;
+
+    let boxInstancedMesh = null, stickerInstancedMesh = null;
+    const dummy = new THREE.Object3D();
+    const snap = v => Math.round(v * 2) / 2;
+
+    const PLANE_ROT = {
+        '0,1,0': new THREE.Euler(-Math.PI/2, 0, 0), '0,-1,0': new THREE.Euler(Math.PI/2, 0, 0),
+        '1,0,0': new THREE.Euler(0, Math.PI/2, 0), '-1,0,0': new THREE.Euler(0, -Math.PI/2, 0),
+        '0,0,1': new THREE.Euler(0, 0, 0), '0,0,-1': new THREE.Euler(0, Math.PI, 0)
+    };
+
+    function initLogicCube() {
+        cubies = []; stickersData = [];
+        const limit = (N - 1) / 2;
+        let boxIdCounter = 0, stickerIdCounter = 0;
+
+        for (let x = -limit; x <= limit; x++) {
+            for (let y = -limit; y <= limit; y++) {
+                for (let z = -limit; z <= limit; z++) {
+                    if (N > 1 && Math.abs(x) < limit - 0.1 && Math.abs(y) < limit - 0.1 && Math.abs(z) < limit - 0.1) continue;
+                    let cubie = { pos: new THREE.Vector3(x, y, z), baseRotation: new THREE.Matrix4(), boxId: boxIdCounter++ };
+                    cubies.push(cubie);
+
+                    const addSticker = (nx, ny, nz, colorStr) => {
+                        const sPos = new THREE.Vector3(x + nx * 0.476, y + ny * 0.476, z + nz * 0.476);
+                        const sRot = new THREE.Matrix4().makeRotationFromEuler(PLANE_ROT[`${nx},${ny},${nz}`]);
+                        stickersData.push({ cubie, normal: new THREE.Vector3(nx, ny, nz), color: colorStr, current2DPos: {x: 0, y: 0}, pos: sPos, baseRotation: sRot, stickerId: stickerIdCounter++ });
+                    };
+
+                    if (Math.abs(y - limit) < 0.1) addSticker(0, 1, 0, C_STR.U);
+                    if (Math.abs(y + limit) < 0.1) addSticker(0, -1, 0, C_STR.D);
+                    if (Math.abs(z - limit) < 0.1) addSticker(0, 0, 1, C_STR.F);
+                    if (Math.abs(z + limit) < 0.1) addSticker(0, 0, -1, C_STR.B);
+                    if (Math.abs(x + limit) < 0.1) addSticker(-1, 0, 0, C_STR.L);
+                    if (Math.abs(x - limit) < 0.1) addSticker(1, 0, 0, C_STR.R);
+                }
+            }
+        }
+    }
+
+    const container3D = document.getElementById('canvas-3d-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0ed);
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    container3D.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+
+    function updateCameraFrustum() {
+        const width = container3D.clientWidth, height = container3D.clientHeight;
+        if(width === 0 || height === 0) return;
+        const aspect = width / height;
+        const frustum = 3.5 * Math.max(1, N); 
+        camera.left = frustum * aspect / -2; camera.right = frustum * aspect / 2;
+        camera.top = frustum / 2; camera.bottom = frustum / -2;
+        
+        const camDist = Math.max(10, N * 4);
+        camera.position.set(camDist, camDist, camDist);
+        camera.near = 0.1; camera.far = Math.max(200, N * 15);
+        camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+    }
+
+    function build3DScene() {
+        if (boxInstancedMesh) { scene.remove(boxInstancedMesh); boxInstancedMesh.geometry.dispose(); boxInstancedMesh.material.dispose(); }
+        if (stickerInstancedMesh) { scene.remove(stickerInstancedMesh); stickerInstancedMesh.geometry.dispose(); stickerInstancedMesh.material.dispose(); }
+        updateCameraFrustum();
+
+        const boxGeo = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+        const boxMat = new THREE.MeshLambertMaterial({ color: COLORS.CORE });
+        boxInstancedMesh = new THREE.InstancedMesh(boxGeo, boxMat, Math.max(1, cubies.length));
+        
+        cubies.forEach(c => {
+            dummy.position.copy(c.pos); dummy.quaternion.setFromRotationMatrix(c.baseRotation); dummy.updateMatrix();
+            boxInstancedMesh.setMatrixAt(c.boxId, dummy.matrix);
+        });
+
+        const planeGeo = new THREE.PlaneGeometry(0.88, 0.88); 
+        const planeMat = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        stickerInstancedMesh = new THREE.InstancedMesh(planeGeo, planeMat, Math.max(1, stickersData.length));
+        
+        stickersData.forEach(s => {
+            dummy.position.copy(s.pos); dummy.quaternion.setFromRotationMatrix(s.baseRotation); dummy.updateMatrix();
+            stickerInstancedMesh.setMatrixAt(s.stickerId, dummy.matrix);
+            stickerInstancedMesh.setColorAt(s.stickerId, new THREE.Color(s.color));
+        });
+
+        scene.add(boxInstancedMesh); scene.add(stickerInstancedMesh);
+    }
+
+    const canvas2DContainer = document.getElementById('canvas-2d-container');
+    const canvas2D = document.getElementById('view-2d');
+    const ctx = canvas2D.getContext('2d');
+    
+    function getCircleIntersection(cA, rA, cB, rB, isInner, cx, cy) {
+        const dx = cB.x - cA.x, dy = cB.y - cA.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d > rA + rB || d < Math.abs(rA - rB) || d === 0) return { x: cA.x, y: cA.y }; 
+        const a = (rA*rA - rB*rB + d*d) / (2*d);
+        const h = Math.sqrt(Math.max(0, rA*rA - a*a));
+        const px = cA.x + a * dx / d, py = cA.y + a * dy / d;
+        const rx = -h * dy / d, ry = h * dx / d;
+        const i1 = { x: px + rx, y: py + ry }; const i2 = { x: px - rx, y: py - ry };
+        const d1 = (i1.x - cx)**2 + (i1.y - cy)**2; const d2 = (i2.x - cx)**2 + (i2.y - cy)**2;
+        return (isInner ? (d1 < d2) : (d1 > d2)) ? i1 : i2;
+    }
+
+    let C1, C2, C3, U_UNIT;
+    let topologyCenters = {};
+
+    function updateTopologyCenters() {
+        const w = canvas2DContainer.clientWidth, h = canvas2DContainer.clientHeight;
+        if(w === 0 || h === 0) return;
+        canvas2D.width = w; canvas2D.height = h;
+        const cx = w / 2, cy = h / 2;
+        U_UNIT = h / 16; 
+        const Rc = 4 * U_UNIT / Math.sqrt(3);
+
+        C1 = { x: cx, y: cy - Rc }; C2 = { x: cx - 2*U_UNIT, y: cy + Rc/2 }; C3 = { x: cx + 2*U_UNIT, y: cy + Rc/2 };       
+        topologyCenters = { cx, cy, C1, C2, C3, U_UNIT };
+    }
+
+    function getExact2DNode(pos, normal) {
+        const px = snap(pos.x), py = snap(pos.y), pz = snap(pos.z);
+        const nx = snap(normal.x), ny = snap(normal.y), nz = snap(normal.z);
+        const { C1, C2, C3, U_UNIT, cx, cy } = topologyCenters;
+        const maxCoord = Math.max(0.5, (N - 1) / 2);
+        const coordToR = (c) => (4 - c / maxCoord) * U_UNIT;
+        
+        const rY = coordToR(py); const rZ = coordToR(pz); const rX = coordToR(px); 
+        if (ny === 1)  return getCircleIntersection(C2, rZ, C3, rX, true, cx, cy); 
+        if (ny === -1) return getCircleIntersection(C2, rZ, C3, rX, false, cx, cy);
+        if (nz === 1)  return getCircleIntersection(C1, rY, C3, rX, true, cx, cy); 
+        if (nz === -1) return getCircleIntersection(C1, rY, C3, rX, false, cx, cy);
+        if (nx === 1)  return getCircleIntersection(C1, rY, C2, rZ, true, cx, cy); 
+        if (nx === -1) return getCircleIntersection(C1, rY, C2, rZ, false, cx, cy);
+        return { x: cx, y: cy };
+    }
+
+    function initStickers2D() { stickersData.forEach(s => { s.current2DPos = getExact2DNode(s.cubie.pos, s.normal); }); }
+
+    function draw2DTopology() {
+        ctx.clearRect(0, 0, canvas2D.width, canvas2D.height);
+        const { C1, C2, C3, U_UNIT } = topologyCenters;
+        if(!C1) return;
+
+        ctx.lineWidth = Math.max(0.5, 1.5 * (3 / Math.max(1, N))); ctx.strokeStyle = "rgba(0,0,0,0.12)";
+        [C1, C2, C3].forEach(center => {
+            for (let i = 0; i < Math.max(1, N); i++) {
+                const c = (Math.max(1, N) - 1) / 2 - i;
+                const r = (4 - c / Math.max(0.5, (Math.max(1, N) - 1) / 2)) * U_UNIT;
+                ctx.beginPath(); ctx.arc(center.x, center.y, r, 0, Math.PI * 2); ctx.stroke();
+            }
+        });
+
+        const dotRadius = Math.max(1.5, 13 * (3 / Math.max(1, N))); 
+        ctx.lineWidth = Math.max(0.2, 1 * (3 / Math.max(1, N))); ctx.strokeStyle = '#222';
+
+        const grouped = {};
+        stickersData.forEach(s => { (grouped[s.color] = grouped[s.color] || []).push(s); });
+        
+        for (let col in grouped) {
+            ctx.beginPath(); ctx.fillStyle = col;
+            grouped[col].forEach(s => {
+                ctx.moveTo(s.current2DPos.x + dotRadius, s.current2DPos.y);
+                ctx.arc(s.current2DPos.x, s.current2DPos.y, dotRadius, 0, Math.PI * 2);
+            });
+            ctx.fill(); ctx.stroke();
+        }
+    }
+
+    const resizeObserver3D = new ResizeObserver(() => { updateCameraFrustum(); if (!isEngineRunning && !dragCtrl.active) renderer.render(scene, camera); });
+    resizeObserver3D.observe(container3D);
+    const resizeObserver2D = new ResizeObserver(() => { updateTopologyCenters(); if (!isEngineRunning && !dragCtrl.active && !isEditMode) { initStickers2D(); draw2DTopology(); } });
+    resizeObserver2D.observe(canvas2DContainer);
+
+    // --- 高阶代数：支持 WCA 及 Singmaster ---
+    function getMoveStringFromSlider(axisName, idx) {
+        const isMid = (N % 2 !== 0 && idx === (N - 1) / 2);
+        if (axisName === 'Y') {
+            if (idx === 0) return "U"; else if (idx === N - 1) return "D"; else if (isMid) return "E";
+            else if (idx < N / 2) return `${idx + 1}U`; else return `${N - idx}D`;
+        } else if (axisName === 'X') {
+            if (idx === 0) return "R"; else if (idx === N - 1) return "L"; else if (isMid) return "M";
+            else if (idx < N / 2) return `${idx + 1}R`; else return `${N - idx}L`;
+        } else if (axisName === 'Z') {
+            if (idx === 0) return "F"; else if (idx === N - 1) return "B"; else if (isMid) return "S";
+            else if (idx < N / 2) return `${idx + 1}F`; else return `${N - idx}B`;
+        }
+        return "";
+    }
+
+    function parseWCA(token) {
+        let str = token.trim();
+        if (!str) return [];
+        str = str.replace(/M([UDFBLR])/gi, "2$1"); 
+        str = str.replace(/T([UDFBLR])/gi, "2$1w");
+        
+        let match = str.match(/^(\d*)([UDFBLRMESXYZudfblr]+)(w?)(.*)$/i);
+        if (!match) return [];
+
+        let prefix = match[1], letter = match[2], isWideStr = match[3], modifiers = match[4];
+        let isWide = isWideStr.toLowerCase() === 'w' || /^[udfblr]$/.test(letter);
+        let isDouble = modifiers.includes('2');
+        let isPrime = modifiers.includes("'") || modifiers.includes("i");
+        
+        let num = prefix ? parseInt(prefix) : (isWide ? 2 : 1);
+        letter = letter.toUpperCase();
+        
+        let axis = '', baseAngle = 0, indices = [], c2d = null;
+        const limit = Math.max(0, N - 1);
+        let isPrimary = ['U','R','F','X','Y','Z','S'].includes(letter);
+        baseAngle = isPrimary ? -Math.PI/2 : Math.PI/2;
+
+        if (['U','D','E','Y'].includes(letter)) { axis = 'Y'; c2d = C1; }
+        if (['R','L','M','X'].includes(letter)) { axis = 'X'; c2d = C3; } 
+        if (['F','B','S','Z'].includes(letter)) { axis = 'Z'; c2d = C2; }
+
+        if (['X','Y','Z'].includes(letter)) {
+            for(let i=0; i<=limit; i++) indices.push(i);
+        } else if (['M','E','S'].includes(letter)) {
+            for(let i=1; i<limit; i++) indices.push(i);
+        } else {
+            let isOpposite = ['D','L','B'].includes(letter);
+            if (isWide) {
+                for(let i=0; i<num; i++) indices.push(isOpposite ? limit - i : i);
+            } else {
+                indices.push(isOpposite ? limit - (num-1) : (num-1));
+            }
+        }
+        if (isPrime) baseAngle *= -1;
+
+        const config = {
+            axis: new THREE.Vector3(axis==='X'?1:0, axis==='Y'?1:0, axis==='Z'?1:0),
+            angle: baseAngle,
+            check: p => {
+                let pCoord = axis==='X' ? p.x : (axis==='Y' ? p.y : p.z);
+                return indices.some(idx => Math.abs(pCoord - (limit/2 - idx)) < 0.1);
+            },
+            c2d: () => c2d,
+            wcaMove: token.trim(),
+            isLastOfToken: true
+        };
+        
+        if (isDouble) {
+            return [{...config, isLastOfToken: false}, {...config, isLastOfToken: true}];
+        } else {
+            return [config];
+        }
+    }
+
+    function updateSliderLabel() {
+        if (currentOpMode === 1) {
+            const val = parseInt(document.getElementById('op-layer').value);
+            const axis = document.getElementById('op-axis').value;
+            const notation = getMoveStringFromSlider(axis, val - 1);
+            document.getElementById('mode-toggle-btn').innerHTML = `${notation}`;
+        } else {
+            document.getElementById('mode-toggle-btn').innerHTML = `⌨ 公式`;
+        }
+    }
+
+    function toggleOpMode() {
+        if (dragCtrl.active) return;
+        currentOpMode = currentOpMode === 1 ? 2 : 1;
+        document.getElementById('mode-1-container').style.display = currentOpMode === 1 ? 'flex' : 'none';
+        document.getElementById('mode-2-container').style.display = currentOpMode === 2 ? 'flex' : 'none';
+        updateSliderLabel();
+        if (currentOpMode === 2) document.getElementById('formula-input').focus();
+    }
+
+    document.getElementById('formula-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') executeFormulaInput();
+    });
+
+    function renderHistory() {
+        const histEl = document.getElementById('move-history-text');
+        const toggleBtn = document.getElementById('hist-toggle-btn');
+        histEl.innerText = moveHistory.length > 0 ? moveHistory.join(' ') : '暂无记录';
+        document.getElementById('undo-btn').disabled = moveHistory.length === 0;
+        document.getElementById('redo-btn').disabled = redoHistory.length === 0;
+
+        if (!histEl.classList.contains('expanded')) {
+            if (histEl.scrollWidth > histEl.clientWidth) {
+                toggleBtn.style.display = 'block'; histEl.scrollLeft = histEl.scrollWidth;
+            } else toggleBtn.style.display = 'none';
+        }
+    }
+
+    function toggleHistory() {
+        const histEl = document.getElementById('move-history-text');
+        const btn = document.getElementById('hist-toggle-btn');
+        if (histEl.classList.contains('expanded')) {
+            histEl.classList.remove('expanded'); btn.innerText = '▼';
+            setTimeout(() => { histEl.scrollLeft = histEl.scrollWidth; }, 10);
+        } else {
+            histEl.classList.add('expanded'); btn.innerText = '▲';
+        }
+    }
+
+    function pushHistory(moveStr) { moveHistory.push(moveStr); redoHistory = []; renderHistory(); }
+    function clearHistory() { if(isEngineRunning || dragCtrl.active) return; moveHistory = []; redoHistory = []; renderHistory(); }
+
+    function undoMove() {
+        if (isEngineRunning || dragCtrl.active || isEditMode || moveHistory.length === 0) return;
+        const lastMove = moveHistory.pop(); redoHistory.push(lastMove); renderHistory(); 
+        let inverseMove = lastMove.endsWith("'") || lastMove.endsWith("i") ? lastMove.replace(/['i]$/, "") : lastMove + "'";
+        const configs = parseWCA(inverseMove);
+        if(configs.length > 0) executeEngineQueue(configs, false);
+    }
+
+    function redoMove() {
+        if (isEngineRunning || dragCtrl.active || isEditMode || redoHistory.length === 0) return;
+        const nextMove = redoHistory.pop(); moveHistory.push(nextMove); renderHistory();
+        const configs = parseWCA(nextMove);
+        if(configs.length > 0) executeEngineQueue(configs, false);
+    }
+
+    function scrambleCube() {
+        if (isEngineRunning || dragCtrl.active || isEditMode) return;
+        if (moveHistory.length > 0 && !confirm("打乱将清空当前历史记录，是否继续？")) return;
+        clearHistory();
+        
+        const faces = ['U', 'D', 'L', 'R', 'F', 'B'];
+        const modifiers = ["", "'", "2"];
+        const moves = Math.max(20, N * 8);
+        let lastFace = "";
+        
+        for(let i=0; i<moves; i++){
+            let face = faces[Math.floor(Math.random() * faces.length)];
+            while(face === lastFace) face = faces[Math.floor(Math.random() * faces.length)];
+            lastFace = face;
+            
+            let layer = Math.floor(Math.random() * Math.ceil(N/2)) + 1;
+            let prefix = layer === 1 ? "" : layer;
+            let mod = modifiers[Math.floor(Math.random() * modifiers.length)];
+            
+            let token = prefix + face + mod;
+            const configs = parseWCA(token);
+            configs.forEach(cfg => {
+                let animData = precomputeRotation(cfg);
+                applyRotationFrame(animData, 1.0);
+                commitRotation(animData);
+                if (cfg.isLastOfToken) moveHistory.push(cfg.wcaMove);
+            });
+        }
+        renderHistory(); draw2DTopology(); renderer.render(scene, camera);
+    }
+
+    function resetCube() {
+        if (isEngineRunning || dragCtrl.active || isEditMode) return;
+        if (moveHistory.length > 0 && !confirm("将清空历史并恢复初始状态，是否继续？")) return;
+        changeOrder(N);
+    }
+
+    function executeFormulaStr(str) {
+        const configs = parseWCA(str);
+        if (configs.length > 0) executeEngineQueue(configs, true);
+    }
+
+    function executeSliderRotation(isPrime) {
+        const axis = document.getElementById('op-axis').value;
+        const layerIdx = parseInt(document.getElementById('op-layer').value) - 1;
+        const baseMove = getMoveStringFromSlider(axis, layerIdx);
+        executeFormulaStr(baseMove + (isPrime ? "'" : ""));
+    }
+
+    function executeFormulaInput() {
+        if (isEditMode || dragCtrl.active) return;
+        const formulaInput = document.getElementById('formula-input');
+        const input = formulaInput.value.trim();
+        if (!input) return;
+        
+        formulaInput.value = ''; 
+        
+        const tokens = input.split(/\s+/);
+        let parsedConfigs = [];
+        for (let t of tokens) {
+            const configs = parseWCA(t);
+            if (configs.length === 0) { alert(`未知公式符号: ${t}`); return; }
+            parsedConfigs.push(...configs);
+        }
+        if (parsedConfigs.length > 0) {
+            executeEngineQueue(parsedConfigs, true);
+        }
+    }
+
+    function changeOrder(newOrder) {
+        N = newOrder;
+        const slider = document.getElementById('op-layer');
+        slider.max = Math.max(1, N); slider.value = 1; updateSliderLabel();
+        clearHistory(); 
+        initLogicCube(); build3DScene(); updateTopologyCenters(); initStickers2D();
+    }
+
+    function handleOrderChange(val) {
+        if (isEngineRunning || dragCtrl.active || isEditMode) return;
+        let newN = N;
+        if (val === 'custom') {
+            const input = prompt("请输入挑战阶数:", "10");
+            const parsed = parseInt(input);
+            if (parsed && parsed >= 1) {
+                newN = parsed;
+                const selector = document.getElementById('order-selector');
+                const opt = document.createElement('option');
+                opt.value = newN; opt.text = `${newN} 阶 (自定)`; opt.selected = true;
+                selector.insertBefore(opt, selector.lastElementChild);
+            } else { document.getElementById('order-selector').value = N; return; }
+        } else newN = parseInt(val);
+        changeOrder(newN);
+    }
+
+    function precomputeRotation(config) {
+        const rotMatrix = new THREE.Matrix4().makeRotationAxis(config.axis, config.angle);
+        const activeCubies = cubies.filter(c => config.check(c.pos));
+        const activeStickers = stickersData.filter(s => activeCubies.includes(s.cubie));
+
+        let centerGroups = {};
+        let stickerAnims = activeStickers.map(s => {
+            let animStart2D = { x: s.current2DPos.x, y: s.current2DPos.y };
+            let nextPos = s.cubie.pos.clone().applyMatrix4(rotMatrix);
+            let nextNormal = s.normal.clone().applyMatrix4(rotMatrix);
+            let animEnd2D = getExact2DNode(nextPos, nextNormal);
+
+            let animCenter2D;
+            if (Math.abs(s.normal.dot(config.axis)) > 0.9) {
+                let cx = 0, cy = 0, cz = 0;
+                if (config.axis.x !== 0) cx = snap(s.cubie.pos.x);
+                if (config.axis.y !== 0) cy = snap(s.cubie.pos.y);
+                if (config.axis.z !== 0) cz = snap(s.cubie.pos.z);
+                animCenter2D = getExact2DNode(new THREE.Vector3(cx, cy, cz), s.normal);
+            } else animCenter2D = config.c2d();
+
+            let startAngle2D = Math.atan2(animStart2D.y - animCenter2D.y, animStart2D.x - animCenter2D.x);
+            let endAngle2D = Math.atan2(animEnd2D.y - animCenter2D.y, animEnd2D.x - animCenter2D.x);
+            let diff = endAngle2D - startAngle2D;
+            if (diff > Math.PI) diff -= Math.PI * 2;
+            if (diff < -Math.PI) diff += Math.PI * 2;
+            
+            const key = animCenter2D.x.toFixed(2) + '_' + animCenter2D.y.toFixed(2);
+            if (centerGroups[key] === undefined) centerGroups[key] = 0;
+            if (Math.abs(diff) > 0.01) centerGroups[key] += Math.sign(diff); 
+
+            return { s, animStart2D, animEnd2D, animCenter2D, startAngle2D, rawDiff: diff, centerKey: key };
+        });
+
+        stickerAnims.forEach(anim => {
+            const consensusSign = Math.sign(centerGroups[anim.centerKey]) || 1;
+            let diff = anim.rawDiff;
+            if (Math.abs(diff) > 0.01) {
+                if (consensusSign > 0 && diff < 0) diff += Math.PI * 2;
+                if (consensusSign < 0 && diff > 0) diff -= Math.PI * 2;
+            }
+            anim.endAngle2D = anim.startAngle2D + diff;
+            anim.startRadius2D = Math.sqrt((anim.animStart2D.x - anim.animCenter2D.x)**2 + (anim.animStart2D.y - anim.animCenter2D.y)**2);
+            anim.endRadius2D = Math.sqrt((anim.animEnd2D.x - anim.animCenter2D.x)**2 + (anim.animEnd2D.y - anim.animCenter2D.y)**2);
+        });
+
+        activeCubies.forEach(c => { c.startPos = c.pos.clone(); c.startRot = c.baseRotation.clone(); });
+        activeStickers.forEach(s => { s.startPos = s.pos.clone(); s.startRot = s.baseRotation.clone(); });
+
+        return { config, rotMatrix, activeCubies, activeStickers, stickerAnims };
+    }
+
+    function applyRotationFrame(animData, progress) {
+        const currentMatrix = new THREE.Matrix4().makeRotationAxis(animData.config.axis, progress * animData.config.angle);
+        
+        animData.activeCubies.forEach(c => {
+            const tPos = c.startPos.clone().applyMatrix4(currentMatrix);
+            const tRot = currentMatrix.clone().multiply(c.startRot);
+            dummy.position.copy(tPos); dummy.quaternion.setFromRotationMatrix(tRot); dummy.updateMatrix();
+            boxInstancedMesh.setMatrixAt(c.boxId, dummy.matrix);
+        });
+        boxInstancedMesh.instanceMatrix.needsUpdate = true;
+
+        animData.activeStickers.forEach(s => {
+            const tPos = s.startPos.clone().applyMatrix4(currentMatrix);
+            const tRot = currentMatrix.clone().multiply(s.startRot);
+            dummy.position.copy(tPos); dummy.quaternion.setFromRotationMatrix(tRot); dummy.updateMatrix();
+            stickerInstancedMesh.setMatrixAt(s.stickerId, dummy.matrix);
+        });
+        stickerInstancedMesh.instanceMatrix.needsUpdate = true;
+
+        animData.stickerAnims.forEach(anim => {
+            const currentAngle = anim.startAngle2D + (anim.endAngle2D - anim.startAngle2D) * progress;
+            const currentRadius = anim.startRadius2D + (anim.endRadius2D - anim.startRadius2D) * progress;
+            anim.s.current2DPos.x = anim.animCenter2D.x + Math.cos(currentAngle) * currentRadius;
+            anim.s.current2DPos.y = anim.animCenter2D.y + Math.sin(currentAngle) * currentRadius;
+        });
+    }
+
+    function commitRotation(animData) {
+        animData.activeCubies.forEach(c => {
+            c.pos.applyMatrix4(animData.rotMatrix); c.pos.x = snap(c.pos.x); c.pos.y = snap(c.pos.y); c.pos.z = snap(c.pos.z);
+            c.baseRotation = animData.rotMatrix.clone().multiply(c.startRot);
+            dummy.position.copy(c.pos); dummy.quaternion.setFromRotationMatrix(c.baseRotation); dummy.updateMatrix();
+            boxInstancedMesh.setMatrixAt(c.boxId, dummy.matrix);
+        });
+        boxInstancedMesh.instanceMatrix.needsUpdate = true;
+
+        animData.activeStickers.forEach(s => {
+            s.pos.applyMatrix4(animData.rotMatrix); s.baseRotation = animData.rotMatrix.clone().multiply(s.startRot);
+            dummy.position.copy(s.pos); dummy.quaternion.setFromRotationMatrix(s.baseRotation); dummy.updateMatrix();
+            stickerInstancedMesh.setMatrixAt(s.stickerId, dummy.matrix);
+        });
+        stickerInstancedMesh.instanceMatrix.needsUpdate = true;
+
+        animData.stickerAnims.forEach(anim => {
+            anim.s.normal.applyMatrix4(animData.rotMatrix);
+            anim.s.normal.x = snap(anim.s.normal.x); anim.s.normal.y = snap(anim.s.normal.y); anim.s.normal.z = snap(anim.s.normal.z);
+            anim.s.current2DPos = { x: anim.animEnd2D.x, y: anim.animEnd2D.y };
+        });
+    }
+
+    function setControlsDisabled(disabled) {
+        document.querySelectorAll('.action-btn:not(#undo-btn):not(#redo-btn):not(#clear-btn):not(#hist-toggle-btn):not(#mode-toggle-btn), #op-axis, #op-layer, #order-selector, .split-btn:not(.history-group) button').forEach(b => b.disabled = disabled);
+        document.getElementById('mode-toggle-btn').disabled = isEngineRunning || dragCtrl.active;
+        
+        if (disabled) {
+            document.getElementById('undo-btn').disabled = true; document.getElementById('redo-btn').disabled = true; document.getElementById('clear-btn').disabled = true;
+        } else {
+            renderHistory(); document.getElementById('clear-btn').disabled = false;
+        }
+    }
+
+    function executeEngineQueue(configs, recordHistory) {
+        if (isEditMode || dragCtrl.active) return;
+        configs.forEach(cfg => formulaQueue.push({ config: cfg, recordHistory: recordHistory && cfg.isLastOfToken }));
+        if (!isEngineRunning) {
+            isEngineRunning = true; setControlsDisabled(true); processNextInQueue();
+        }
+    }
+
+    function processNextInQueue() {
+        if (formulaQueue.length === 0) { isEngineRunning = false; setControlsDisabled(false); return; }
+        const task = formulaQueue.shift();
+        
+        if (task.recordHistory) pushHistory(task.config.wcaMove);
+        let animData = precomputeRotation(task.config);
+        
+        const duration = formulaQueue.length > 0 ? 200 : 350; 
+        const startTime = performance.now();
+
+        function step(time) {
+            let t = Math.min((time - startTime) / duration, 1);
+            applyRotationFrame(animData, t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
+            if (t < 1) requestAnimationFrame(step);
+            else {
+                commitRotation(animData);
+                processNextInQueue();
+            }
+        }
+        requestAnimationFrame(step);
+    }
+
+    let dragCtrl = { active: false, startX: 0, layerStr: null, animData: null };
+    container3D.addEventListener('pointerdown', (e) => {
+        if (isEngineRunning || isEditMode) return;
+        dragCtrl.active = true; dragCtrl.startX = e.clientX; dragCtrl.layerStr = null; dragCtrl.animData = null;
+        setControlsDisabled(true);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (!dragCtrl.active || isEngineRunning) return;
+        let deltaX = e.clientX - dragCtrl.startX;
+        if (!dragCtrl.layerStr) {
+            if (Math.abs(deltaX) > 3) { 
+                dragCtrl.layerStr = deltaX > 0 ? "y'" : "y"; 
+                dragCtrl.animData = precomputeRotation(parseWCA(dragCtrl.layerStr)[0]); 
+            } else return;
+        }
+
+        let progress = (dragCtrl.layerStr === "y'") ? (deltaX / 100) : (-deltaX / 100);
+        if (progress < 0) {
+            applyRotationFrame(dragCtrl.animData, 0); 
+            dragCtrl.layerStr = deltaX > 0 ? "y'" : "y";
+            dragCtrl.animData = precomputeRotation(parseWCA(dragCtrl.layerStr)[0]); 
+            progress = (dragCtrl.layerStr === "y'") ? (deltaX / 100) : (-deltaX / 100);
+        }
+        if (progress >= 1.0) {
+            applyRotationFrame(dragCtrl.animData, 1.0); commitRotation(dragCtrl.animData); pushHistory(dragCtrl.layerStr);
+            dragCtrl.startX += (dragCtrl.layerStr === "y'" ? 100 : -100); dragCtrl.layerStr = null; dragCtrl.animData = null; return;
+        }
+        applyRotationFrame(dragCtrl.animData, progress);
+    });
+
+    function endDrag(e) {
+        if (!dragCtrl.active || isEngineRunning) return;
+        dragCtrl.active = false;
+        if (dragCtrl.animData) {
+            let deltaX = e.clientX - dragCtrl.startX;
+            let progress = (dragCtrl.layerStr === "y'") ? (deltaX / 100) : (-deltaX / 100);
+            let targetProgress = progress > 0.5 ? 1.0 : 0.0;
+            isEngineRunning = true;
+            const duration = 200 * Math.abs(targetProgress - progress);
+            const startTime = performance.now();
+            function step(time) {
+                let t = Math.min((time - startTime) / Math.max(duration, 1), 1);
+                applyRotationFrame(dragCtrl.animData, progress + (targetProgress - progress) * (t * (2 - t)));
+                if (t < 1) requestAnimationFrame(step);
+                else {
+                    if (targetProgress === 1.0) { commitRotation(dragCtrl.animData); pushHistory(dragCtrl.layerStr); } 
+                    else applyRotationFrame(dragCtrl.animData, 0); 
+                    isEngineRunning = false; setControlsDisabled(false);
+                }
+            }
+            requestAnimationFrame(step);
+        } else setControlsDisabled(false);
+    }
+    window.addEventListener('pointerup', endDrag); window.addEventListener('pointercancel', endDrag);
+
+    function toggleEditMode() {
+        if (isEngineRunning || dragCtrl.active) return;
+        const editBtn = document.getElementById('edit-btn');
+        const palette = document.getElementById('palette');
+        
+        if (!isEditMode) {
+            if (moveHistory.length > 0 && !confirm("警告：进入涂色编辑模式必须清空当前的因果历史记录。\n\n是否继续并清空时间轴？")) return;
+            clearHistory(); 
+            isEditMode = true; palette.style.display = 'block';
+            editBtn.innerText = '校验并退出涂色'; editBtn.style.backgroundColor = '#27ae60'; editBtn.style.borderColor = '#2ecc71';
+            setControlsDisabled(true); editBtn.disabled = false;
+        } else {
+            if (validateColors()) {
+                isEditMode = false; palette.style.display = 'none';
+                editBtn.innerText = '涂色模式'; editBtn.style.backgroundColor = '#e74c3c'; editBtn.style.borderColor = '#c0392b';
+                setControlsDisabled(false);
+            }
+        }
+    }
+
+    function setBrush(colorHex, element) {
+        currentBrushColor = colorHex;
+        document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active')); element.classList.add('active');
+    }
+
+    function validateColors() {
+        const counts = {};
+        for (let c of Object.values(C_STR)) counts[c] = 0;
+        for (let s of stickersData) counts[s.color] = (counts[s.color] || 0) + 1;
+        const target = Math.max(1, N * N);
+        for (let [key, val] of Object.entries(C_STR)) {
+            if (counts[val] !== target) { alert(`校验未通过：\n每种颜色应当精确含有 ${target} 块！\n当前状态下某颜色数量多余或缺失，请仔细检查并填补。`); return false; }
+        }
+        
+        if (N > 1) { 
+            for (let cubie of cubies) {
+                const cubieColors = stickersData.filter(s => s.cubie === cubie).map(s => s.color);
+                if (new Set(cubieColors).size !== cubieColors.length) { alert('校验未通过：【面色互斥定律】冲突！\n不允许同一个实体块出现两面颜色相同，这在物理世界无法拼装。'); return false; }
+                if (cubieColors.includes(C_STR.U) && cubieColors.includes(C_STR.D)) { alert('校验未通过：【对立色互斥】冲突！\n顶/底面对立色（黄/白）绝不可能出现在同一个边角块上。'); return false; }
+                if (cubieColors.includes(C_STR.F) && cubieColors.includes(C_STR.B)) { alert('校验未通过：【对立色互斥】冲突！\n前/后面对立色（蓝/绿）绝不可能出现在同一个边角块上。'); return false; }
+                if (cubieColors.includes(C_STR.L) && cubieColors.includes(C_STR.R)) { alert('校验未通过：【对立色互斥】冲突！\n左/右面对立色（橙/红）绝不可能出现在同一个边角块上。'); return false; }
+            }
+        }
+        return true;
+    }
+
+    let isPainting = false;
+    canvas2D.addEventListener('pointerdown', (e) => { if (!isEditMode) return; isPainting = true; paintSticker(e); });
+    canvas2D.addEventListener('pointermove', (e) => { if (!isEditMode || !isPainting) return; paintSticker(e); });
+    window.addEventListener('pointerup', () => { isPainting = false; });
+    
+    function paintSticker(e) {
+        const rect = canvas2D.getBoundingClientRect();
+        const x = e.clientX - rect.left, y = e.clientY - rect.top;
+        const dotRadius = Math.max(1.5, 13 * (3 / Math.max(1, N))) * 1.5; 
+        for (let s of stickersData) {
+            const dx = s.current2DPos.x - x, dy = s.current2DPos.y - y;
+            if (dx*dx + dy*dy <= dotRadius*dotRadius) {
+                if (s.color !== currentBrushColor) {
+                    s.color = currentBrushColor;
+                    stickerInstancedMesh.setColorAt(s.stickerId, new THREE.Color(s.color));
+                    stickerInstancedMesh.instanceColor.needsUpdate = true;
+                    draw2DTopology();
+                }
+                break;
+            }
+        }
+    }
+
+    function renderLoop() {
+        requestAnimationFrame(renderLoop); draw2DTopology(); renderer.render(scene, camera);
+    }
+
+    changeOrder(N);
+    renderLoop();
+</script>
+</body>
+</html>
