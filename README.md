@@ -18,7 +18,7 @@ A highly optimized, dependency-free, and high-performance N-order Rubik's Cube t
 ## 🚀 Live Demo
 
 This project is deployed on GitHub Pages. Click to play:
-**[👉 Live Demo Here] (https://aghinouz.github.io/Rubik-s-Pro-Engine/)**
+**[👉 Live Demo Here](https://aghinouz.github.io/Rubik-s-Pro-Engine/)**
 
 ## 🛠️ Local Usage
 
