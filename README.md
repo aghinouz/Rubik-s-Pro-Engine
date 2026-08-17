@@ -27,7 +27,7 @@ Simply clone this repository and double-click `index.html` in any modern browser
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GPLv3 License](LICENSE).
 
 ## ☕ Support the Author
 If you find this script helpful and it saves you time managing your torrents, consider supporting the development!
