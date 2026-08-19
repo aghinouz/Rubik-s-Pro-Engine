@@ -29,7 +29,7 @@
         .action-btn:hover:not(:disabled) { background-color: #1abc9c; }
         .action-btn:disabled { background-color: #7f8c8d; opacity: 0.6; cursor: not-allowed; }
 
-        .operation-panel { display: flex; flex-direction: row; align-items: center; gap: 15px; width: 100%; max-width: 800px; background: rgba(0,0,0,0.2); padding: 12px 20px; border-radius: 6px; box-sizing: border-box; height: 60px; }
+        .operation-panel { display: flex; flex-direction: row; align-items: center; gap: 15px; width: 100%; max-width: 800px; background: rgba(0,0,0,0.2); padding: 12px 20px; border-radius: 6px; box-sizing: border-box; height: 60px; position: relative; }
         
         input[type=range] { flex: 1; cursor: pointer; accent-color: #1abc9c; margin: 0; min-width: 100px; }
 
@@ -79,6 +79,41 @@
         .github-corner:hover .octo-arm { animation: octocat-wave 560ms ease-in-out; }
         @keyframes octocat-wave { 0%, 100% { transform: rotate(0); } 20%, 60% { transform: rotate(-25deg); } 40%, 80% { transform: rotate(10deg); } }
         @media (max-width:500px) { .github-corner:hover .octo-arm { animation: none; } .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; } }
+
+        /* 手绘引导提示动画与样式 */
+        @keyframes float-hint {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); } /* 调整为轻微的垂直律动 */
+        }
+        #switch-hint {
+            position: absolute;
+            top: -22px; 
+            left: 0px; 
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.4s ease-out;
+            animation: float-hint 2s ease-in-out infinite;
+            z-index: 20;
+        }
+        #switch-hint-text {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, sans-serif;
+            color: #f1c40f;
+            font-size: 13px;
+            font-weight: bold;
+            transform: rotate(-6deg);
+            display: inline-block;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            margin-left: 55px;
+        }
+        #switch-hint-arrow {
+            position: absolute;
+            width: 36px;
+            height: 45px;
+            left: 12px; /* 稳稳居中在文字左侧的空隙内 */
+            top: 10px;  /* 贴近下方按钮 */
+            overflow: visible;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -146,6 +181,15 @@
     </div>
 
     <div class="operation-panel">
+        <!-- 新增的手绘箭头与提示文本 -->
+        <div id="switch-hint">
+            <span id="switch-hint-text" data-i18n="switchHint">Click here to switch!</span>
+            <!-- 极简轻微弯曲路径：从右上（靠近文字）平滑弯曲至正下方（指向按钮） -->
+            <svg id="switch-hint-arrow" viewBox="0 0 100 100" style="stroke: #f1c40f; stroke-width: 8; fill: none; stroke-linecap: round; stroke-linejoin: round; overflow: visible;">
+                <path d="M 80,15 Q 40,50 55,95 M 55,95 L 30,80 M 55,95 L 75,70" />
+            </svg>
+        </div>
+
         <button id="mode-toggle-btn" class="action-btn" style="background:#2980b9; min-width: 60px; font-size:15px; color:#f1c40f;" onclick="toggleOpMode()">U</button>
         
         <div id="mode-1-container" style="display:flex; flex:1; align-items:center; gap:15px; justify-content:space-between;">
@@ -181,6 +225,7 @@
     // --- i18n 国际化字典引擎 ---
     const I18N = {
         en: {
+            switchHint: "Click here to switch!", // <-- 新增此行
             paintHint: "Swipe to paint (GPU Instanced):",
             opt1: "2 Layer", opt2: "3 Layers", optCustom: "Custom...",
             scramble: "Scramble", reset: "Reset", paintMode: "Paint Mode", validateExit: "Validate & Exit",
@@ -200,6 +245,7 @@
             placeholder: "Enter formula (e.g., R U R' y M 2U)"
         },
         zh: {
+            switchHint: "点击此处切换模式！", // <-- 新增此行
             paintHint: "滑动涂色 (GPU 实例更新)：",
             opt1: "2 阶", opt2: "3 阶", optCustom: "自定...",
             scramble: "打乱", reset: "重置", paintMode: "涂色模式", validateExit: "校验并退出",
@@ -530,11 +576,19 @@
 
     function toggleOpMode() {
         if (dragCtrl.active) return;
+        
+        // 当用户首次点击时，淡出并彻底移除手绘提示
+        const hint = document.getElementById('switch-hint');
+        if (hint && hint.style.opacity !== '0') {
+            hint.style.opacity = '0';
+            setTimeout(() => hint.remove(), 400); 
+        }
+
         currentOpMode = currentOpMode === 1 ? 2 : 1;
         document.getElementById('mode-1-container').style.display = currentOpMode === 1 ? 'flex' : 'none';
         document.getElementById('mode-2-container').style.display = currentOpMode === 2 ? 'flex' : 'none';
         updateSliderLabel();
-        if (currentOpMode === 2) document.getElementById('formula-input').focus();
+        if (currentOpMode === 2) setTimeout(() => document.getElementById('formula-input').focus(), 0);
     }
 
     document.getElementById('formula-input').addEventListener('keydown', function(e) {
